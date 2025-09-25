@@ -84,14 +84,15 @@ function createProductCard(productName, fragmentData) {
   log('info', 'Creating product card', { productName, fragmentData });
   
   const li = document.createElement('li');
-  li.className = 'products-card';
+  li.className = 'product-card';
 
   if (!fragmentData) {
     // Fallback content if fragment data is not available
+    li.className = 'product-card product-error';
     li.innerHTML = `
-      <div class="products-card-body">
-        <h3 class="products-card-title">${productName || 'Product'}</h3>
-        <p class="products-card-error">Content fragment data not available</p>
+      <div class="product-card-body">
+        <h3>${productName || 'Product'}</h3>
+        <p>Content fragment data not available</p>
       </div>
     `;
     return li;
@@ -111,11 +112,9 @@ function createProductCard(productName, fragmentData) {
     img.src = authorUrl;
     img.alt = altText;
     img.loading = 'lazy';
-    img.style.width = '100%';
-    img.style.height = 'auto';
     picture.appendChild(img);
     
-    imageHtml = `<div class="products-card-image">${picture.outerHTML}</div>`;
+    imageHtml = `<div class="product-card-image">${picture.outerHTML}</div>`;
   }
 
   // Extract plaintext content from rich text fields and format for HTML
@@ -123,24 +122,64 @@ function createProductCard(productName, fragmentData) {
   const promo = fragmentData.promo?.plaintext || '';
   const notes = fragmentData.notes?.plaintext || '';
 
-  // Format text content by converting line breaks to HTML
+  // Format text content by converting line breaks to HTML and structure content
   const formatText = (text) => {
     if (!text) return '';
     return text
-      .replace(/\n\n/g, '</p><p>')  // Convert double line breaks to paragraph breaks
-      .replace(/\n/g, '<br>')       // Convert single line breaks to <br>
       .replace(/\u003E/g, '>')      // Convert encoded > characters
       .trim();
+  };
+
+  // Format promo content with proper structure
+  const formatPromoContent = (promoText) => {
+    if (!promoText) return '';
+    
+    const formatted = formatText(promoText);
+    const lines = formatted.split('\n').filter(line => line.trim());
+    
+    let content = '';
+    lines.forEach((line, index) => {
+      if (line.includes('special offer:') || line.includes('Rewards special offer:')) {
+        content += `<h4>${line}</h4>`;
+      } else {
+        content += `<p>${line}</p>`;
+      }
+    });
+    
+    return content;
+  };
+
+  // Format notes content with proper structure
+  const formatNotesContent = (notesText) => {
+    if (!notesText) return '';
+    
+    const formatted = formatText(notesText);
+    const lines = formatted.split('\n').filter(line => line.trim());
+    
+    let content = '<h4>Important numbers for new cards:</h4>';
+    lines.forEach((line, index) => {
+      if (index === 0 && line.includes('Important numbers')) {
+        return; // Skip the title line as we've already added it
+      }
+      if (line.trim()) {
+        content += `<p>${line}</p>`;
+      }
+    });
+    
+    return content;
   };
 
   // Create card content
   const cardContent = `
     ${imageHtml}
-    <div class="products-card-body">
-      <h3 class="products-card-title">${fragmentData.creditCardName || productName || 'Product'}</h3>
-      ${description ? `<div class="products-card-description"><p>${formatText(description)}</p></div>` : ''}
-      ${promo ? `<div class="products-card-promo"><p>${formatText(promo)}</p></div>` : ''}
-      ${notes ? `<div class="products-card-notes"><p>${formatText(notes)}</p></div>` : ''}
+    <div class="product-card-body">
+      <h3 class="product-title">${fragmentData.creditCardName || productName || 'Product'}</h3>
+      ${description ? `<div class="product-description">${formatText(description)}</div>` : ''}
+      ${promo ? `<div class="product-promo">${formatPromoContent(promo)}</div>` : ''}
+      ${notes ? `<div class="product-notes">${formatNotesContent(notes)}</div>` : ''}
+      <div class="product-cta">
+        <a href="#" class="product-cta-button">Find out more</a>
+      </div>
     </div>
   `;
 
@@ -195,15 +234,21 @@ export default async function decorate(block) {
     
     if (productItems.length === 0) {
       log('warn', 'No product items found in block');
+      block.style.display = 'block';
       block.innerHTML = '<p>No products to display</p>';
       return;
     }
 
+    // Create title section
+    const titleSection = document.createElement('div');
+    titleSection.className = 'products-title';
+    titleSection.innerHTML = '<h2>Your card options</h2>';
+
     // Create container for products
     const ul = document.createElement('ul');
-    ul.className = 'products-list';
 
-    // Show loading state
+    // Show loading state (without flex layout during loading)
+    block.style.display = 'block';
     block.innerHTML = '<div class="products-loading">Loading products...</div>';
     
     // Fetch content fragment data for each product item
@@ -230,14 +275,17 @@ export default async function decorate(block) {
       }
     });
 
-    // Replace block content with the products list
+    // Replace block content with title and products list
     block.innerHTML = '';
+    block.style.display = ''; // Reset to use CSS flex layout
+    block.appendChild(titleSection);
     block.appendChild(ul);
     
     log('info', `Products block decoration completed with ${productCards.length} items`);
     
   } catch (error) {
     log('error', 'Failed to decorate products block', error);
+    block.style.display = 'block';
     block.innerHTML = '<p class="products-error">Failed to load products. Please try again later.</p>';
   }
 }
