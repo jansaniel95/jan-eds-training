@@ -100,17 +100,20 @@ function createProductCard(productName, fragmentData) {
   // Create image container if creditCardImage is available
   let imageHtml = '';
   if (fragmentData.creditCardImage?._authorUrl) {
-    const img = document.createElement('img');
-    img.src = fragmentData.creditCardImage._authorUrl;
-    img.alt = fragmentData.creditCardName || 'Credit Card';
-    img.loading = 'lazy';
+    const authorUrl = fragmentData.creditCardImage._authorUrl;
+    const altText = fragmentData.creditCardName || 'Credit Card';
     
-    const picture = createOptimizedPicture(
-      fragmentData.creditCardImage._authorUrl, 
-      fragmentData.creditCardName || 'Credit Card', 
-      false, 
-      [{ width: '750' }]
-    );
+    log('info', 'Using direct author URL for image', { authorUrl, altText });
+    
+    // Create picture element with direct author URL (no optimization)
+    const picture = document.createElement('picture');
+    const img = document.createElement('img');
+    img.src = authorUrl;
+    img.alt = altText;
+    img.loading = 'lazy';
+    img.style.width = '100%';
+    img.style.height = 'auto';
+    picture.appendChild(img);
     
     imageHtml = `<div class="products-card-image">${picture.outerHTML}</div>`;
   }
