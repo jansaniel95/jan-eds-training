@@ -216,18 +216,6 @@
     ]
   },
   {
-    "id": "products",
-    "fields": [
-      {
-        "component": "text",
-        "valueType": "string",
-        "name": "blockTitle",
-        "label": "Block Title",
-        "value": "Your Card Options"
-      }
-    ]
-  },
-  {
     "id": "productItem",
     "fields": [
       {
